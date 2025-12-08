@@ -82,7 +82,7 @@ bool MainFrame::CheckAllInputs()
     }
 
     if (!missing.IsEmpty()) {
-        txtLog->AppendText("Thiếu: " + missing + ". Vui lòng nhập đủ thông tin.\n");
+        txtLog->AppendText("Missing: " + missing + ". Please enter complete information .\n");
         return false;   // báo là không hợp lệ
     }
 
@@ -175,10 +175,10 @@ MainFrame::MainFrame(const wxString& title)
 
     // ==== LOAD DỮ LIỆU TỪ CSV LÚC MỚI MỞ APP ====
     if (m_book.loadFromCsv(CSV_PATH)) {
-        txtLog->AppendText("Đã load dữ liệu từ file employees.csv\n");
+        txtLog->AppendText("Loaded data from employees.csv file\n");
     }
     else {
-        txtLog->AppendText("Không tìm thấy employees.csv, bắt đầu với danh sách rỗng.\n");
+        txtLog->AppendText("Cannot find employees.csv, initiating with an empty list.\n");
     }
 }
 
@@ -204,6 +204,7 @@ void MainFrame::OnAdd(wxCommandEvent& evt)
         return;
     }
     emp.age = static_cast<int>(age);
+
     emp.address = ToStd(txtAddress->GetValue());
     emp.phone = ToStd(txtPhone->GetValue());
     emp.title = ToStd(txtTitle->GetValue());
@@ -273,36 +274,36 @@ void MainFrame::OnFilterByAge(wxCommandEvent& evt)
     long minAge, maxAge;
 
     wxString sMin = wxGetTextFromUser(
-        "Nhập tuổi tối thiểu:",
+        "Enter the minimum age:",
         "Filter by Age",
         "0",
         this
     );
     if (sMin.IsEmpty()) return;
     if (!sMin.ToLong(&minAge)) {
-        txtLog->AppendText("Giá trị tuổi tối thiểu không hợp lệ.\n");
+        txtLog->AppendText("Invalid minimum age.\n");
         return;
     }
 
     wxString sMax = wxGetTextFromUser(
-        "Nhập tuổi tối đa:",
+        "Enter the maximum age:",
         "Filter by Age",
         "100",
         this
     );
     if (sMax.IsEmpty()) return;
     if (!sMax.ToLong(&maxAge)) {
-        txtLog->AppendText("Giá trị tuổi tối đa không hợp lệ.\n");
+        txtLog->AppendText("Invalid maximum age.\n");
         return;
     }
 
     auto result = m_book.filterByAgeRange((int)minAge, (int)maxAge);
 
     if (result.empty()) {
-        txtLog->AppendText("Không tìm thấy nhân viên trong khoảng tuổi.\n");
+        txtLog->AppendText("Unable to find the employee in the age range.\n");
     }
     else {
-        txtLog->AppendText("Đã filter theo tuổi, mở cửa sổ kết quả.\n");
+        txtLog->AppendText("Filtered according to Age, opening result window.\n");
         ShowAllFrame* frame = new ShowAllFrame(this, result);
         frame->Show(true);
     }
@@ -311,7 +312,7 @@ void MainFrame::OnFilterByAge(wxCommandEvent& evt)
 void MainFrame::OnFilterByTitle(wxCommandEvent& evt)
 {
     wxString title = wxGetTextFromUser(
-        "Nhập chức vụ (ví dụ: Giam_Doc, Nhan_Vien...):",
+        "Enter Title (Example: Director, Manager...):",
         "Filter by Title",
         "",
         this
@@ -321,10 +322,10 @@ void MainFrame::OnFilterByTitle(wxCommandEvent& evt)
     auto result = m_book.filterByTitle(ToStd(title));
 
     if (result.empty()) {
-        txtLog->AppendText("Không tìm thấy nhân viên với chức vụ đó.\n");
+        txtLog->AppendText("Cannot find the employee with that title.\n");
     }
     else {
-        txtLog->AppendText("Đã filter theo chức vụ, mở cửa sổ kết quả.\n");
+        txtLog->AppendText("Filtered according to Title, opening the result window.\n");
         ShowAllFrame* frame = new ShowAllFrame(this, result);
         frame->Show(true);
     }
@@ -335,26 +336,26 @@ void MainFrame::OnFilterBySalary(wxCommandEvent& evt)
     long minS, maxS;
 
     wxString sMin = wxGetTextFromUser(
-        "Nhập lương tối thiểu (VD: 5000000):",
+        "Enter minimum salary (Example: 5000000):",
         "Filter by Salary",
         "0",
         this
     );
     if (sMin.IsEmpty()) return;
     if (!sMin.ToLong(&minS) || minS < 0) {
-        txtLog->AppendText("Giá trị lương tối thiểu không hợp lệ.\n");
+        txtLog->AppendText("Invalid minimum salary.\n");
         return;
     }
 
     wxString sMax = wxGetTextFromUser(
-        "Nhập lương tối đa (VD: 20000000):",
+        "Enter maximum salary (Example: 20000000):",
         "Filter by Salary",
         "100000000",
         this
     );
     if (sMax.IsEmpty()) return;
     if (!sMax.ToLong(&maxS) || maxS < 0) {
-        txtLog->AppendText("Invalid maximum number\n");
+        txtLog->AppendText("Invalid maximum salary.\n");
         return;
     }
 
@@ -364,10 +365,10 @@ void MainFrame::OnFilterBySalary(wxCommandEvent& evt)
     );
 
     if (result.empty()) {
-        txtLog->AppendText("Can't find suitable data with this filter.\n");
+        txtLog->AppendText("Unable to find any employee in that salary range.\n");
     }
     else {
-        txtLog->AppendText("--Succesfully filter, result--.\n");
+        txtLog->AppendText("Filtered according to salary, opening result window.\n");
         ShowAllFrame* frame = new ShowAllFrame(this, result);
         frame->Show(true);
     }
@@ -381,7 +382,7 @@ void MainFrame::OnClose(wxCloseEvent& evt)
 {
     // Lưu dữ liệu ra CSV trước khi thoát
     if (!m_book.saveToCsv(CSV_PATH)) {
-        std::cerr << "Can't store CSV file: " << CSV_PATH << "\n";
+        std::cerr << "Unable to save CSV file: " << CSV_PATH << "\n";
     }
 
     evt.Skip(); // cho wxWidgets xử lý tiếp (đóng cửa sổ)
