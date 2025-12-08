@@ -1,4 +1,4 @@
-﻿#include "main_frame.h"
+#include "main_frame.h"
 #include <sstream>
 #include <iostream>
 
@@ -198,7 +198,12 @@ void MainFrame::OnAdd(wxCommandEvent& evt)
     }
 
     dataEmployee emp;
-    emp.age = txtAge->IsEmpty() ? 0 : std::stoi(ToStd(txtAge->GetValue()));
+    long age;
+    if (!txtAge->GetValue().ToLong(&age) || age < 0) {
+        txtLog->AppendText("Age is invalid.\n");
+        return;
+    }
+    emp.age = static_cast<int>(age);
     emp.address = ToStd(txtAddress->GetValue());
     emp.phone = ToStd(txtPhone->GetValue());
     emp.title = ToStd(txtTitle->GetValue());
@@ -349,7 +354,7 @@ void MainFrame::OnFilterBySalary(wxCommandEvent& evt)
     );
     if (sMax.IsEmpty()) return;
     if (!sMax.ToLong(&maxS) || maxS < 0) {
-        txtLog->AppendText("Giá trị lương tối đa không hợp lệ.\n");
+        txtLog->AppendText("Invalid maximum number\n");
         return;
     }
 
@@ -359,10 +364,10 @@ void MainFrame::OnFilterBySalary(wxCommandEvent& evt)
     );
 
     if (result.empty()) {
-        txtLog->AppendText("Không tìm thấy nhân viên trong khoảng lương.\n");
+        txtLog->AppendText("Can't find suitable data with this filter.\n");
     }
     else {
-        txtLog->AppendText("Đã filter theo lương, mở cửa sổ kết quả.\n");
+        txtLog->AppendText("--Succesfully filter, result--.\n");
         ShowAllFrame* frame = new ShowAllFrame(this, result);
         frame->Show(true);
     }
@@ -376,7 +381,7 @@ void MainFrame::OnClose(wxCloseEvent& evt)
 {
     // Lưu dữ liệu ra CSV trước khi thoát
     if (!m_book.saveToCsv(CSV_PATH)) {
-        std::cerr << "Khong the luu file CSV: " << CSV_PATH << "\n";
+        std::cerr << "Can't store CSV file: " << CSV_PATH << "\n";
     }
 
     evt.Skip(); // cho wxWidgets xử lý tiếp (đóng cửa sổ)
