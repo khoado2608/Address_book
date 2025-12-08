@@ -1,4 +1,4 @@
-﻿#include "address_book.h"
+#include "address_book.h"
 
 #include <algorithm>
 #include <cctype>
@@ -12,24 +12,37 @@ using namespace std;
 
 static inline bool is_ws(unsigned char c) { return std::isspace(c); }
 
-// dùng để tách từ theo khoảng trắng / _ / - / . / ,
 static inline bool is_sep(unsigned char c) {
     return c == ' ' || c == '_' || c == '-' || c == '/' || c == ',' || c == '.';
 }
 
 static std::string toLower(std::string s) {
-    for (unsigned char c : s) {
+    for (auto& c : s) {
         c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     }
     return s;
 }
 
+// Capitalize first letter of each word
+static std::string capitalizeEachWord(std::string s) {
+    bool newWord = true;
+    for (auto& c : s) {
+        if (std::isspace(c) || c == '_' || c == '-') {
+            newWord = true;
+        }
+        else {
+            if (newWord) {
+                c = static_cast<char>(std::toupper(c));
+                newWord = false;
+            }
+            else {
+                c = static_cast<char>(std::tolower(c));
+            }
+        }
+    }
+    return s;
+}
 
-// Chuẩn hóa key: gộp mọi loại separator thành '_', bỏ separator đầu/cuối, lowercase.
-// Ví dụ:
-//  "Giam_Doc"   -> "giam_doc"
-//  "giam doc "  -> "giam_doc"
-//  "giam__DOC_" -> "giam_doc"
 static std::string normalizeKey(const std::string& s) {
     std::string out;
     out.reserve(s.size());
@@ -54,19 +67,12 @@ static std::string normalizeKey(const std::string& s) {
     return out;
 }
 
-// Chuẩn hóa Name để lưu key trong map:
-// - trim khoảng trắng
-// - collapse nhiều khoảng trắng thành 1 space
-// - mỗi từ viết hoa chữ cái đầu, các chữ sau lowercase
-// - vẫn giữ dấu '_' nếu có (VD: Pham_Thanh_Vinh)
 static std::string normalizeName(std::string s) {
-    // trim
     auto first = std::find_if_not(s.begin(), s.end(), is_ws);
     if (first == s.end()) return "";
     auto last = std::find_if_not(s.rbegin(), s.rend(), is_ws).base();
     std::string t(first, last);
 
-    // collapse space
     std::string tmp;
     tmp.reserve(t.size());
     bool prev_space = false;
@@ -83,7 +89,6 @@ static std::string normalizeName(std::string s) {
         }
     }
 
-    // capitalize mỗi từ (ngăn bởi space hoặc '_')
     std::string out;
     out.reserve(tmp.size());
     bool newWord = true;
@@ -105,14 +110,10 @@ static std::string normalizeName(std::string s) {
     return out;
 }
 
-// dùng cho so sánh title
 static std::string normalizeTitleKey(const std::string& s) {
     return normalizeKey(s);
 }
 
-// parse lương: giữ lại toàn bộ chữ số, bỏ dấu . , khoảng trắng, chữ
-// "10.000.000"   -> 10000000
-// "12,500,000đ"  -> 12500000
 static long long parseSalary(const std::string& s) {
     std::string digits;
     digits.reserve(s.size());
@@ -135,16 +136,28 @@ static long long parseSalary(const std::string& s) {
 
 void PeopleBook::addData(const std::string& name, const dataEmployee& emp) {
     std::string key = normalizeName(name);
-    data[key] = emp;
+
+    dataEmployee e = emp;                       // copy ra bản local
+    e.address = capitalizeEachWord(e.address);  // chuẩn hóa address
+    e.title = capitalizeEachWord(e.title);    // chuẩn hóa title
+
+    data[key] = e;
 }
+
 
 bool PeopleBook::updateData(const std::string& name, const dataEmployee& emp) {
     std::string key = normalizeName(name);
     auto it = data.find(key);
     if (it == data.end()) return false;
-    it->second = emp;
+
+    dataEmployee e = emp;
+    e.address = capitalizeEachWord(e.address);
+    e.title = capitalizeEachWord(e.title);
+
+    it->second = e;
     return true;
 }
+
 
 bool PeopleBook::removeData(const std::string& name) {
     std::string key = normalizeName(name);
@@ -221,20 +234,6 @@ PeopleBook::filterByTitle(const std::string& title) const {
 }
 
 std::vector<std::pair<std::string, dataEmployee>>
-PeopleBook::filterByAddressKeyword(const std::string& keyword) const {
-    std::string needle = toLower(keyword);
-
-    std::vector<std::pair<std::string, dataEmployee>> result;
-    for (const auto& [name, emp] : data) {
-        std::string hay = toLower(emp.address);
-        if (hay.find(needle) != std::string::npos) {
-            result.emplace_back(name, emp);
-        }
-    }
-    return result;
-}
-
-std::vector<std::pair<std::string, dataEmployee>>
 PeopleBook::filterBySalaryRange(long long minSalary, long long maxSalary) const {
     if (minSalary > maxSalary) std::swap(minSalary, maxSalary);
 
@@ -250,7 +249,6 @@ PeopleBook::filterBySalaryRange(long long minSalary, long long maxSalary) const 
 }
 
 // ====================== PeopleBook - CSV ======================
-// Định dạng CSV: Name,Age,Address,Phone,Title,Salary
 
 bool PeopleBook::loadFromCsv(const std::string& path) {
     std::ifstream in(path);
@@ -265,7 +263,6 @@ bool PeopleBook::loadFromCsv(const std::string& path) {
     while (std::getline(in, line)) {
         if (line.empty()) continue;
 
-        // bỏ dòng header nếu có
         if (first) {
             first = false;
             if (line.rfind("Name,", 0) == 0) {
@@ -281,7 +278,7 @@ bool PeopleBook::loadFromCsv(const std::string& path) {
         std::getline(ss, addr, ',');
         std::getline(ss, phone, ',');
         std::getline(ss, title, ',');
-        std::getline(ss, salary);           // phần còn lại
+        std::getline(ss, salary);
 
         if (name.empty()) continue;
 
@@ -293,9 +290,9 @@ bool PeopleBook::loadFromCsv(const std::string& path) {
             emp.age = 0;
         }
 
-        emp.address = addr;
+        emp.address = capitalizeEachWord(addr);
         emp.phone = phone;
-        emp.title = title;
+        emp.title = capitalizeEachWord(title);
         emp.salary = salary;
 
         addData(name, emp);
